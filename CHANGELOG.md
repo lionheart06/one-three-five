@@ -15,3 +15,4 @@ First public release.
 - Export and import of the plan as JSON; two-click "Clear day"; optional `resetDaily`.
 - Light and dark themes, `--otf-*` custom properties, narrow single-column layout.
 - TypeScript declarations.
+- Served from GitHub Pages: `latest/` and one frozen folder per release.

@@ -5,6 +5,7 @@ Drop-in 1-3-5 todo planner for userscripts and web pages. Hand it a list of todo
 where each task went the next time the same list is supplied.
 
 - One `@require` or `<script>` line, no dependencies, about 9 KB gzipped.
+- Served from GitHub Pages: [live demo](https://lionheart06.github.io/one-three-five/).
 - Drag with mouse, touch or pen, or use the keyboard. Screen-reader friendly (WCAG 2.2 AA).
 - Renders in a Shadow DOM: the host page's CSS can't break it, and it can't break the page.
 - Remembers assignments per site with Tampermonkey storage or `localStorage`.
@@ -17,7 +18,7 @@ where each task went the next time the same list is supplied.
 // ==UserScript==
 // @name     My 1-3-5
 // @match    https://example.com/todos*
-// @require  https://cdn.jsdelivr.net/npm/@lionheart06/one-three-five@1.0.0/dist/one-three-five.min.js
+// @require  https://lionheart06.github.io/one-three-five/v1.0.0/one-three-five.min.js
 // @grant    GM_getValue
 // @grant    GM_setValue
 // ==/UserScript==
@@ -38,21 +39,23 @@ A complete script with periodic refresh is in
 
 ```html
 <div id="board"></div>
-<script src="https://cdn.jsdelivr.net/npm/@lionheart06/one-three-five@1.0.0/dist/one-three-five.min.js"></script>
+<script src="https://lionheart06.github.io/one-three-five/v1.0.0/one-three-five.min.js"></script>
 <script>
   OneThreeFive.create({ mount: '#board', todos: ['Write report', 'Call Ana', 'Book tickets'] });
 </script>
 ```
 
-### npm
+### Which URL to use
 
-```sh
-npm install @lionheart06/one-three-five
-```
+| URL | What it serves |
+| --- | --- |
+| `https://lionheart06.github.io/one-three-five/vX.Y.Z/one-three-five.min.js` | A frozen release. Use this in scripts you rely on. |
+| `https://lionheart06.github.io/one-three-five/latest/one-three-five.min.js` | The current `main` branch. Changes without notice. |
 
-```js
-import { create } from '@lionheart06/one-three-five';
-```
+Each folder also has `one-three-five.esm.js` for `import { create } from '…'`.
+Tampermonkey caches `@require` files; bump the version in the URL to pick up a new release.
+
+The package is not published to npm.
 
 ## How it behaves
 
@@ -147,7 +150,14 @@ npm install
 npm test          # unit + DOM tests (vitest, happy-dom)
 npm run test:e2e  # builds, then real drags + a WCAG AA audit in Chromium (Playwright, axe)
 npm run build     # dist/*.js; fails if the bundle exceeds 12 KB gzipped
+npm run build:site  # site/ as GitHub Pages serves it: latest/, one folder per v* tag, demo
 ```
+
+## Releasing
+
+1. Update `version` in `package.json` and `CHANGELOG.md`, commit to `main`.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`
+3. `gh workflow run pages.yml` to publish the new folder (pushes to `main` publish `latest/` on their own).
 
 `demo/index.html` runs the board on a plain page after `npm run build`.
 

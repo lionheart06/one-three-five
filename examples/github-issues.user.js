@@ -4,7 +4,7 @@
 // @version      1.0.0
 // @description  Plan your day from a GitHub issue list with the 1-3-5 rule.
 // @match        https://github.com/*/*/issues*
-// @require      https://cdn.jsdelivr.net/npm/@lionheart06/one-three-five@1.0.0/dist/one-three-five.min.js
+// @require      https://lionheart06.github.io/one-three-five/latest/one-three-five.min.js
 // @grant        GM_getValue
 // @grant        GM_setValue
 // ==/UserScript==
