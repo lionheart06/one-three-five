@@ -8,7 +8,7 @@ import { createStore } from './storage.js';
 import { createView, resolveMount } from './ui/view.js';
 
 export { BUCKETS };
-export const version = '0.2.0';
+export const version = '0.3.0';
 
 export function create(options = {}) {
   const listId = String(options.listId ?? 'default');
@@ -153,7 +153,7 @@ export function create(options = {}) {
     },
   };
 
-  const view = mount ? createView(board, { mount, capacities: model.capacities, theme: options.theme, renderTask: options.renderTask }) : null;
+  const view = mount ? createView(board, { mount, capacities: model.capacities, theme: options.theme, renderTask: options.renderTask, listId }) : null;
   if (Array.isArray(options.todos)) board.setTodos(options.todos);
   return board;
 }

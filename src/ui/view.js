@@ -7,6 +7,9 @@ const ZONES = ['1', '3', '5', 'u'];
 const LABELS = { 1: 'Big task', 3: 'Medium tasks', 5: 'Small tasks', u: 'Unassigned' };
 const MOVE_KEYS = { 1: '1', 3: '3', 5: '5', 0: null };
 const DRAG_THRESHOLD = 4; // px of movement before a press becomes a drag, so clicks still work
+// Touch drags start after a still press, so a swipe on a card scrolls the list instead.
+const LONG_PRESS_MS = 300;
+const LONG_PRESS_SLOP = 8; // px a finger may wander during the press
 const CLEAR_CONFIRM_MS = 3000;
 
 function el(tag, attrs = {}, ...children) {
@@ -52,7 +55,7 @@ export function resolveMount(mount) {
   return target;
 }
 
-export function createView(board, { mount, capacities, theme, renderTask }) {
+export function createView(board, { mount, capacities, theme, renderTask, listId }) {
   const host = el('div', { class: 'one-three-five' });
   if (theme === 'light' || theme === 'dark') host.dataset.theme = theme;
   const shadow = host.attachShadow({ mode: 'open' });
@@ -60,6 +63,9 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
 
   const live = el('div', { class: 'sr', 'aria-live': 'polite' });
   const help = el('div', { class: 'sr', id: 'otf-help' }, 'Press 1, 3 or 5 to move this task to that bucket, 0 to unassign it. Arrow keys move between tasks.');
+  const exportButton = el('button', { type: 'button', class: 'export' }, 'Export');
+  const importButton = el('button', { type: 'button', class: 'import' }, 'Import');
+  const fileInput = el('input', { type: 'file', accept: 'application/json,.json', hidden: true });
   const clearButton = el('button', { type: 'button', class: 'clear' }, 'Clear day');
 
   const zones = {};
@@ -75,7 +81,7 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
   const root = el(
     'div',
     { class: 'board' },
-    el('div', { class: 'header' }, el('h2', {}, 'Today'), clearButton),
+    el('div', { class: 'header' }, el('h2', {}, 'Today'), el('div', { class: 'actions' }, exportButton, importButton, clearButton, fileInput)),
     el('div', { class: 'grid' }, el('div', { class: 'buckets' }, zones[1].section, zones[3].section, zones[5].section), zones.u.section),
     help,
     live,
@@ -226,8 +232,39 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
     if (drag || event.button !== 0) return;
     const source = event.target.closest?.('.card');
     if (!source) return;
-    drag = { key: source.dataset.key, source, pointerId: event.pointerId, x0: event.clientX, y0: event.clientY, active: false, ghost: null, target: null };
+    const touch = event.pointerType === 'touch';
+    drag = {
+      key: source.dataset.key,
+      source,
+      pointerId: event.pointerId,
+      x0: event.clientX,
+      y0: event.clientY,
+      touch,
+      armed: !touch, // mouse and pen may drag at once; touch waits for the long press
+      active: false,
+      ghost: null,
+      target: null,
+      timer: null,
+    };
     source.setPointerCapture?.(event.pointerId);
+    if (touch) {
+      drag.timer = setTimeout(() => {
+        if (!drag || drag.source !== source) return;
+        drag.armed = true;
+        source.classList.add('pressing');
+        navigator.vibrate?.(10);
+      }, LONG_PRESS_MS);
+    }
+  }
+
+  // Once a touch drag is armed, stop the browser from scrolling under it. Must be non-passive.
+  function onTouchMove(event) {
+    if (drag?.armed && event.cancelable) event.preventDefault();
+  }
+
+  // Android opens a link's context menu on long press; the press belongs to the drag.
+  function onContextMenu(event) {
+    if (drag?.touch) event.preventDefault();
   }
 
   function startDrag() {
@@ -242,6 +279,7 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
     ghost.style.width = `${rect.width}px`;
     root.append(ghost);
     drag.ghost = ghost;
+    drag.source.classList.remove('pressing');
     drag.source.classList.add('dragging');
   }
 
@@ -279,7 +317,13 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
   function onPointerMove(event) {
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (!drag.active) {
-      if (Math.hypot(event.clientX - drag.x0, event.clientY - drag.y0) < DRAG_THRESHOLD) return;
+      const moved = Math.hypot(event.clientX - drag.x0, event.clientY - drag.y0);
+      if (!drag.armed) {
+        // A finger that moves before the long press fires is scrolling: let it.
+        if (moved > LONG_PRESS_SLOP) endDrag();
+        return;
+      }
+      if (moved < DRAG_THRESHOLD && !drag.touch) return;
       startDrag();
     }
     event.preventDefault();
@@ -290,9 +334,10 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
   function endDrag() {
     if (!drag) return null;
     const ended = { ...drag }; // a copy: clearing the highlight below resets drag.target
+    clearTimeout(ended.timer);
     showTarget(null);
     ended.ghost?.remove();
-    ended.source.classList.remove('dragging');
+    ended.source.classList.remove('dragging', 'pressing');
     if (ended.source.hasPointerCapture?.(ended.pointerId)) ended.source.releasePointerCapture(ended.pointerId);
     drag = null;
     if (renderPending) {
@@ -349,7 +394,48 @@ export function createView(board, { mount, capacities, theme, renderTask }) {
     announce('All tasks moved to Unassigned.');
   }
 
+  // ---- export / import (FR-13) ----
+
+  // A flash of feedback on the button itself, alongside the screen-reader announcement.
+  function flash(button, label, message) {
+    const original = button.dataset.label ?? button.textContent;
+    button.dataset.label = original;
+    button.textContent = label;
+    clearTimeout(button.flashTimer);
+    button.flashTimer = setTimeout(() => (button.textContent = original), 2000);
+    announce(message);
+  }
+
+  function onExport() {
+    const url = URL.createObjectURL(new Blob([board.export()], { type: 'application/json' }));
+    const link = el('a', { href: url, download: `one-three-five-${listId}-${new Date().toISOString().slice(0, 10)}.json`, hidden: true });
+    root.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    flash(exportButton, 'Exported', 'Your plan was exported.');
+  }
+
+  async function onImportFile() {
+    const file = fileInput.files?.[0];
+    fileInput.value = ''; // so picking the same file again still fires change
+    if (!file) return;
+    let ok = false;
+    try {
+      ok = board.import(await file.text());
+    } catch {
+      ok = false;
+    }
+    if (ok) flash(importButton, 'Imported', 'Your plan was imported.');
+    else flash(importButton, 'Not a plan file', 'That file is not a one-three-five export; nothing changed.');
+  }
+
   shadow.addEventListener('keydown', onKeyDown);
+  shadow.addEventListener('touchmove', onTouchMove, { passive: false });
+  shadow.addEventListener('contextmenu', onContextMenu);
+  exportButton.addEventListener('click', onExport);
+  importButton.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', onImportFile);
   shadow.addEventListener('pointerdown', onPointerDown);
   shadow.addEventListener('pointermove', onPointerMove);
   shadow.addEventListener('pointerup', onPointerUp);

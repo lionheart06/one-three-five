@@ -84,20 +84,62 @@ test('a short press is a click, not a drag, and opens nothing', async ({ page: p
   expect(await keysIn(p, 'u')).toEqual(['a', 'b', 'c', 'd', 'e']);
 });
 
-test('drags with touch', async ({ page: p, browserName }) => {
-  test.skip(browserName !== 'chromium', 'uses the Chrome DevTools Protocol');
-  await open(p);
+// Touch through the DevTools protocol: real touch events, so the browser decides scroll vs drag.
+async function touchDrag(p, from, to, { holdMs = 0 } = {}) {
   const cdp = await p.context().newCDPSession(p);
-  const a = await card(p, 'b').boundingBox();
-  const b = await zone(p, '1').locator('.slot').boundingBox();
-  const point = (x, y) => ({ touchPoints: [{ x, y }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', ...point(a.x + 20, a.y + 15) });
+  const a = await from.boundingBox();
+  const b = await to.boundingBox();
+  const x0 = a.x + 20, y0 = a.y + 15, x1 = b.x + 20, y1 = b.y + 15;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+  if (holdMs) await p.waitForTimeout(holdMs);
   for (let i = 1; i <= 8; i++) {
     const t = i / 8;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', ...point(a.x + 20 + (b.x - a.x) * t, a.y + 15 + (b.y - a.y) * t) });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t }] });
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  expect(await keysIn(p, '1')).toEqual(['b']);
+}
+
+test.describe('touch', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'uses the Chrome DevTools Protocol');
+
+  test('a long press then a move drags the task', async ({ page: p }) => {
+    await open(p);
+    await touchDrag(p, card(p, 'b'), zone(p, '1').locator('.slot'), { holdMs: 450 });
+    expect(await keysIn(p, '1')).toEqual(['b']);
+  });
+
+  test('a quick swipe scrolls the list instead of dragging', async ({ page: p }) => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: `t${i}`, title: `Task ${i}` }));
+    await open(p, { html: page(many) });
+    const pool = zone(p, 'u').locator('.cards');
+    await touchDrag(p, card(p, 't8'), card(p, 't1'));
+    await expect.poll(() => pool.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+    expect(await keysIn(p, '1')).toEqual([]);
+    expect(await p.evaluate(() => window.board.getState().unassigned.length)).toBe(30);
+  });
+});
+
+test('exports the plan as a JSON file and imports it back', async ({ page: p }) => {
+  await open(p);
+  await p.evaluate(() => window.board.assign('a', 1));
+  const [download] = await Promise.all([p.waitForEvent('download'), p.locator('button.export').click()]);
+  expect(download.suggestedFilename()).toMatch(/^one-three-five-e2e-\d{4}-\d{2}-\d{2}\.json$/);
+  const json = readFileSync(await download.path(), 'utf8');
+  expect(JSON.parse(json).tasks.a.bucket).toBe('1');
+
+  await p.evaluate(() => window.board.clear());
+  expect(await keysIn(p, '1')).toEqual([]);
+  await p.locator('input[type="file"]').setInputFiles({ name: 'plan.json', mimeType: 'application/json', buffer: Buffer.from(json) });
+  await expect(p.locator('button.import')).toHaveText('Imported');
+  expect(await keysIn(p, '1')).toEqual(['a']);
+});
+
+test('rejects a file that is not a plan and changes nothing', async ({ page: p }) => {
+  await open(p);
+  await p.evaluate(() => window.board.assign('a', 3));
+  await p.locator('input[type="file"]').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hello":1}') });
+  await expect(p.locator('button.import')).toHaveText('Not a plan file');
+  expect(await keysIn(p, '3')).toEqual(['a']);
 });
 
 test('the plan survives a reload', async ({ page: p }) => {

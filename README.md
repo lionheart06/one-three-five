@@ -4,7 +4,7 @@ Drop-in 1-3-5 todo planner for userscripts and web pages. Hand it a list of todo
 **1** big, **3** medium and **5** small tasks into buckets for today, and the module remembers
 where each task went the next time the same list is supplied.
 
-> Status: M2 (drag-and-drop board). Next: M3 polish, then the 1.0 release.
+> Status: M3 (polish). Next: the 1.0 release.
 
 ## Use in Tampermonkey
 
@@ -28,8 +28,10 @@ on a plain page after `npm run build`.
 ## Using the board
 
 - Drag a task into a bucket, onto another task to swap the two, or between tasks to reorder.
+  On touch screens, press and hold a task to pick it up; a quick swipe scrolls as usual.
 - With a task focused: `1`, `3`, `5` move it to that bucket, `0` back to Unassigned, arrow keys move focus.
 - "Clear day" moves everything back to Unassigned (it asks for a second click).
+- "Export" downloads the plan as JSON; "Import" loads one back (useful to move it between browsers).
 - Theme follows the system; force it with `theme: 'light' | 'dark'`, or restyle with `--otf-*`
   custom properties on the `.one-three-five` element.
 
@@ -48,6 +50,6 @@ on a plain page after `npm run build`.
 ```sh
 npm install
 npm test          # unit + DOM tests (vitest, happy-dom)
-npm run test:e2e  # builds, then drags for real in Chromium (Playwright)
+npm run test:e2e  # builds, then real drags + a WCAG AA audit in Chromium (Playwright, axe)
 npm run build   # dist/one-three-five.min.js (IIFE) and dist/one-three-five.esm.js
 ```

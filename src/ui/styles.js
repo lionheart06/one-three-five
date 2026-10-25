@@ -71,6 +71,7 @@ export const css = `
   margin-bottom: 10px;
 }
 .header h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 
 button {
   font: inherit;
@@ -141,8 +142,11 @@ button.confirm { color: var(--otf-warn); border-color: var(--otf-warn); }
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y; /* a swipe scrolls; a long press starts a drag */
+  transition: transform 0.12s, box-shadow 0.12s;
 }
+.card.pressing { transform: scale(0.98); box-shadow: 0 0 0 2px var(--otf-accent); }
 .card:focus-visible { outline: 2px solid var(--otf-accent); outline-offset: 1px; }
 .card.dragging { opacity: 0.35; }
 .card.swap-target { border-color: var(--otf-accent); box-shadow: inset 0 0 0 1px var(--otf-accent); }
@@ -176,6 +180,10 @@ button.confirm { color: var(--otf-warn); border-color: var(--otf-warn); }
   cursor: grabbing;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
   opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
 }
 
 .sr {
