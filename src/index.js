@@ -1,15 +1,19 @@
 // Public entry point: OneThreeFive.create(options) returns a board.
-// M1 is headless: the model, persistence and events. The DOM board (mount) arrives in M2.
+// With `mount` it renders the drag-and-drop board there; without it the board is headless
+// (model, persistence and events only), for tests or a host that draws its own UI.
 
 import { createEmitter } from './emitter.js';
 import { BUCKETS, createModel, isValidRecord } from './model.js';
 import { createStore } from './storage.js';
+import { createView, resolveMount } from './ui/view.js';
 
 export { BUCKETS };
-export const version = '0.1.0';
+export const version = '0.2.0';
 
 export function create(options = {}) {
   const listId = String(options.listId ?? 'default');
+  // Resolve first, so a wrong selector fails before anything loads or saves.
+  const mount = options.mount == null ? null : resolveMount(options.mount);
   const events = createEmitter();
   const warn = message => events.emit('warning', { message });
   const model = createModel(options);
@@ -109,6 +113,7 @@ export function create(options = {}) {
       commit();
     },
 
+    capacities: model.capacities,
     getState: () => model.getState(),
     keyOf: todo => model.keyOf(todo),
     bucketOf: key => model.bucketOf(String(key)),
@@ -137,12 +142,18 @@ export function create(options = {}) {
     on: (event, fn) => events.on(event, fn),
     off: (event, fn) => events.off(event, fn),
 
+    show: () => view?.show(),
+    hide: () => view?.hide(),
+
     destroy() {
+      if (destroyed) return;
+      view?.destroy();
       destroyed = true;
       events.clear();
     },
   };
 
+  const view = mount ? createView(board, { mount, capacities: model.capacities, theme: options.theme, renderTask: options.renderTask }) : null;
   if (Array.isArray(options.todos)) board.setTodos(options.todos);
   return board;
 }

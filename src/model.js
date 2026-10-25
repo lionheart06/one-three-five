@@ -216,6 +216,7 @@ export function createModel(options = {}) {
     clear,
     getState,
     load,
+    capacities: Object.freeze(Object.fromEntries(BUCKETS.map(b => [b, capacityOf(b)]))),
     getRecord: () => record,
     getTodos: () => [...todos.values()],
     keyOf: todo => String(getKey(normalizeTodo(todo))),

@@ -4,7 +4,7 @@ Drop-in 1-3-5 todo planner for userscripts and web pages. Hand it a list of todo
 **1** big, **3** medium and **5** small tasks into buckets for today, and the module remembers
 where each task went the next time the same list is supplied.
 
-> Status: M1 (core model, storage, events). The drag-and-drop board UI lands in M2.
+> Status: M2 (drag-and-drop board). Next: M3 polish, then the 1.0 release.
 
 ## Use in Tampermonkey
 
@@ -13,15 +13,25 @@ where each task went the next time the same list is supplied.
 // @grant    GM_getValue
 // @grant    GM_setValue
 
-const board = OneThreeFive.create({ listId: 'github-issues' });
-await board.ready;
+const board = OneThreeFive.create({ listId: 'github-issues', mount: '#todo-board' });
 
 board.setTodos([...document.querySelectorAll('.issue-title')]
   .map(el => ({ id: el.dataset.id, title: el.textContent })));
 
-board.assign('1042', 1);                          // move a task by key into bucket 1
 board.on('change', state => console.log(state.buckets));
 ```
+
+Without `mount` the board is headless: same API and storage, no UI. A full example lives in
+[`examples/github-issues.user.js`](examples/github-issues.user.js); `demo/index.html` runs the board
+on a plain page after `npm run build`.
+
+## Using the board
+
+- Drag a task into a bucket, onto another task to swap the two, or between tasks to reorder.
+- With a task focused: `1`, `3`, `5` move it to that bucket, `0` back to Unassigned, arrow keys move focus.
+- "Clear day" moves everything back to Unassigned (it asks for a second click).
+- Theme follows the system; force it with `theme: 'light' | 'dark'`, or restyle with `--otf-*`
+  custom properties on the `.one-three-five` element.
 
 ## Rules
 
@@ -37,6 +47,7 @@ board.on('change', state => console.log(state.buckets));
 
 ```sh
 npm install
-npm test
+npm test          # unit + DOM tests (vitest, happy-dom)
+npm run test:e2e  # builds, then drags for real in Chromium (Playwright)
 npm run build   # dist/one-three-five.min.js (IIFE) and dist/one-three-five.esm.js
 ```

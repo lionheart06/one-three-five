@@ -1,6 +1,6 @@
 {
   "name": "@lionheart06/one-three-five",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Drop-in 1-3-5 todo planner for userscripts and web pages: drag tasks into 1, 3 and 5 buckets and they stay there.",
   "type": "module",
   "main": "dist/one-three-five.esm.js",
@@ -19,7 +19,8 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test"
   },
   "keywords": [
     "todo",
@@ -30,7 +31,9 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.4",
     "vitest": "^5.0.5"
   }
 }
