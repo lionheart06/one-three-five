@@ -8,7 +8,8 @@ import { createStore } from './storage.js';
 import { createView, resolveMount } from './ui/view.js';
 
 export { BUCKETS };
-export const version = '0.3.0';
+// Replaced at build time from package.json; tests run the source directly.
+export const version = typeof __VERSION__ === 'string' ? __VERSION__ : 'dev';
 
 export function create(options = {}) {
   const listId = String(options.listId ?? 'default');

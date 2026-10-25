@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         1-3-5 for GitHub issues
 // @namespace    https://github.com/lionheart06/one-three-five
-// @version      0.1.0
+// @version      1.0.0
 // @description  Plan your day from a GitHub issue list with the 1-3-5 rule.
 // @match        https://github.com/*/*/issues*
-// @require      https://cdn.jsdelivr.net/npm/@lionheart06/one-three-five@0.3.0/dist/one-three-five.min.js
+// @require      https://cdn.jsdelivr.net/npm/@lionheart06/one-three-five@1.0.0/dist/one-three-five.min.js
 // @grant        GM_getValue
 // @grant        GM_setValue
 // ==/UserScript==
