@@ -23,8 +23,10 @@ where each task went the next time the same list is supplied.
 // @grant    GM_setValue
 // ==/UserScript==
 
+// The board fills whatever element you mount it in, so size and position it yourself.
 const mount = document.createElement('div');
-document.body.prepend(mount);
+mount.style.cssText = 'position:fixed; right:16px; bottom:16px; width:420px; max-height:80vh; overflow:auto; z-index:2147483000;';
+document.body.append(mount);
 
 const board = OneThreeFive.create({ listId: 'example-todos', mount });
 
@@ -32,8 +34,10 @@ board.setTodos([...document.querySelectorAll('.todo')]
   .map(el => ({ id: el.dataset.id, title: el.textContent.trim() })));
 ```
 
-A complete script with periodic refresh is in
-[`examples/github-issues.user.js`](examples/github-issues.user.js).
+The board has no layout options of its own: width and position come from the mount element.
+For a draggable, collapsible, resizable floating panel that remembers its place, see
+[`examples/floating-panel.user.js`](examples/floating-panel.user.js). A complete script with
+periodic refresh is in [`examples/github-issues.user.js`](examples/github-issues.user.js).
 
 ### Plain page
 
