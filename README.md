@@ -140,7 +140,7 @@ Set custom properties on the `.one-three-five` element the board adds inside you
 .one-three-five {
   --otf-accent: #0a7f5a;
   --otf-radius: 4px;
-  --otf-pool-height: 20rem; /* Unassigned list height before it scrolls */
+  --otf-pool-height: 20rem; /* Unassigned list height before it scrolls (single-column layout; side by side it fills the board height) */
 }
 ```
 

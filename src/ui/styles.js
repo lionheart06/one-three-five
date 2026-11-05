@@ -131,6 +131,15 @@ button.confirm { color: var(--otf-warn); border-color: var(--otf-warn); }
 .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; min-height: 36px; }
 .unassigned .cards { max-height: var(--otf-pool-height); overflow-y: auto; }
 
+/* Side by side: Unassigned stretches to the buckets column and scrolls inside it.
+   contain: size keeps a long list from growing the row. */
+@container (min-width: 480px) {
+  .grid { align-items: stretch; }
+  .buckets { align-content: start; }
+  .unassigned { display: flex; flex-direction: column; contain: size; }
+  .unassigned .cards { flex: 1; min-height: 0; max-height: none; align-content: start; }
+}
+
 .card {
   display: flex;
   align-items: center;

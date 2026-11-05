@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- When the board is wide enough for two columns, Unassigned now fills the full height of the board
+  and scrolls inside it.
+
 ## 1.0.0
 
 First public release.
